@@ -68,3 +68,7 @@ if __name__ == "__main__":
     only_stop_seqs = [x[1] for x in pool.map(RNA.fold, only_stop_seqs)]
     ten_percent_seqs = [x[1] for x in pool.map(RNA.fold, ten_percent_seqs)]
     ninety_percent_seqs = [x[1] for x in pool.map(RNA.fold, ninety_percent_seqs)]
+
+    free_energies = pd.DataFrame([only_stop_seqs, ten_percent_seqs, ninety_percent_seqs], columns=['two', 'ten', 'ninety'])
+    free_energies.to_csv("free_energies.csv")
+    print("Finished and wrote to CSV")
