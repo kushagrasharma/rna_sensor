@@ -6,6 +6,8 @@ from utils import sequence_from_guide_and_target
 import RNA
 import multiprocessing
 
+N_SAMPLES = 1
+
 try:
     cpus = multiprocessing.cpu_count()
 except NotImplementedError:
@@ -17,18 +19,18 @@ def get_target_for_guide(guide):
     guide = list(guide)
     guide[a_index] = 'G'
     guide = ''.join(guide)
-    guide = Seq(guide).reverse_complement()
-    return str(guide)
+    target = Seq(guide).reverse_complement()
+    return str(target)
 
 def get_oligos_for_guide(guide):
-    return {'reverse' : 'CAGC' + guide + 'GGCA', 'forward' : str(Seq(guide).reverse_complement())}
+    return {'reverse' : str(Seq(guide + 'GGCA').reverse_complement()), 'forward' : 'CAGC' + guide}
 
-def get_3primeUTR_oligos_for_target(target):
+def get_oligos_for_target(target):
     return {'reverse': str(Seq(target).reverse_complement()), 'forward': 'GGCC' + target + 'GGCC'}
 
 """
-We want to generate 50bp guides with 'TAG' near the center 
-___23bp___TAG___24bp___
+We want to generate 51bp guides with 'TAG' near the center 
+___24p___TAG___24bp___
 We'll predefine the A %; sample locations to place A, and then randomly fill in the rest with G's and C's
 """
 
@@ -36,8 +38,8 @@ def generate_guides(n_as=0, n_guides=10000):
     guides = []
     stop = list("TAG")
     for i in range(n_guides):
-        guide = [0] * 23 + stop + [0] * 24
-        sample_indices = list(range(23)) + list(range(26, 50))
+        guide = [0] * 24 + stop + [0] * 24
+        sample_indices = list(range(24)) + list(range(27, 51))
         a_indices = sample(sample_indices, n_as) 
         for i in a_indices:
             guide[i] = 'A'
@@ -48,11 +50,30 @@ def generate_guides(n_as=0, n_guides=10000):
         
         guides.append(guide)
     return guides
-if __name__ == "__main__":
-    only_stop_guides = generate_guides(n_as=0, n_guides=10000)
-    ten_percent_as_guides = generate_guides(n_as=int(.1 * 50)-1, n_guides=10000)
-    ninety_percent_as_guides = generate_guides(n_as=int(.9 * 50)-1, n_guides=10000)
 
+if __name__ == "__main__":
+    os_guide = generate_guides(n_as=0, n_guides=N_SAMPLES)[0]
+    os_target = get_target_for_guide(os_guide)
+    os_g_primers = get_oligos_for_guide(os_guide)
+    os_t_primers = get_oligos_for_target(os_target)
+    os = {"guide": os_guide, "target":os_target, "guide primers": os_g_primers, "target primers": os_t_primers}
+
+    ten_guide = generate_guides(n_as=int(.1 * 50)-1, n_guides=N_SAMPLES)[0]
+    ten_target = get_target_for_guide(ten_guide)
+    ten_g_primers = get_oligos_for_guide(ten_guide)
+    ten_t_primers = get_oligos_for_target(ten_target)
+    ten = {"guide": ten_guide, "target":ten_target, "guide primers": ten_g_primers, "target primers": ten_t_primers}
+
+    ninety_guide = generate_guides(n_as=int(.9 * 50)-1, n_guides=N_SAMPLES)[0]
+    ninety_target = get_target_for_guide(ninety_guide)
+    ninety_g_primers = get_oligos_for_guide(ninety_guide)
+    ninety_t_primers = get_oligos_for_target(ninety_target)
+    ninety = {"guide": ninety_guide, "target":ninety_target, "guide primers": ninety_g_primers, "target primers": ninety_t_primers}
+
+    print("os", os)
+    print("\nten", ten)
+    print("\nninety", ninety)
+    """
     only_stop_seqs = []
     ten_percent_seqs = []
     ninety_percent_seqs = []
@@ -68,7 +89,7 @@ if __name__ == "__main__":
     only_stop_seqs = [x[1] for x in pool.map(RNA.fold, only_stop_seqs)]
     ten_percent_seqs = [x[1] for x in pool.map(RNA.fold, ten_percent_seqs)]
     ninety_percent_seqs = [x[1] for x in pool.map(RNA.fold, ninety_percent_seqs)]
-
-    free_energies = pd.DataFrame([only_stop_seqs, ten_percent_seqs, ninety_percent_seqs], columns=['two', 'ten', 'ninety'])
+    free_energies = pd.DataFrame(list(zip(only_stop_seqs, ten_percent_seqs, ninety_percent_seqs)), columns=['two', 'ten', 'ninety'])
     free_energies.to_csv("free_energies.csv")
     print("Finished and wrote to CSV")
+    """
